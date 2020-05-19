@@ -3,7 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
+    "log"
+    "strconv"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
@@ -100,9 +101,50 @@ func (s *SmartContract) QueryAllWallet(ctx contractapi.TransactionContextInterfa
 	return results, nil
 }
 
-//func (s *SmartContract) TransferAmount(ctx contractapi.TransactionContextInterface, fromWallet string, toWallet string,transactionType string, amount string) error  {
-//
-//}
+func (s *SmartContract) TransferAmount(ctx contractapi.TransactionContextInterface, fromWallet string, toWallet string, amount string) error  {
+    var fromWalletAsBytes []byte
+    var toWalletAsBytes []byte
+
+    if exsitedWallet, err := ctx.GetStub().GetState(fromWallet); err != nil {
+        if exsitedWallet == nil{
+            return fmt.Errorf("%s does not exist", exsitedWallet)
+        } else {
+            fromWalletAsBytes = exsitedWallet
+        }
+    } else {
+        log.Printf("Failed to read from world state %s",err)
+    }
+    if exsitedWallet, err := ctx.GetStub().GetState(fromWallet); err != nil {
+        if exsitedWallet == nil{
+            return fmt.Errorf("%s does not exist", exsitedWallet)
+        } else {
+            toWalletAsBytes = exsitedWallet
+        }
+    } else {
+        log.Printf("Failed to read from world state %s",err)
+    }
+    amoutInt, _ := strconv.ParseInt(amount,10,64)
+    var fromWalletObj = new(Wallet)
+    _ = json.Unmarshal(fromWalletAsBytes,fromWalletObj)
+    var toWalletObj = new(Wallet)
+    _ = json.Unmarshal(toWalletAsBytes,toWalletObj)
+    fromWalletObj.Amount -= amoutInt
+    toWalletObj.Amount += amoutInt
+    fromWalletAsBytes, _ = json.Marshal(fromWallet)
+    toWalletAsBytes, _ = json.Marshal(toWallet)
+    errFrom := ctx.GetStub().PutState(fromWallet,fromWalletAsBytes)
+    errTo := ctx.GetStub().PutState(toWallet,toWalletAsBytes)
+    if errFrom != nil {
+        log.Printf("FROM WALLET STATUS %s",errFrom)
+        return errFrom
+    }
+    if errTo != nil{
+        log.Printf("TO WALLET STATUS %s",errTo)
+        return errTo
+    }
+
+    return nil
+}
 
 
 func main() {
